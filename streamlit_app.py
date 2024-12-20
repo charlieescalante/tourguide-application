@@ -101,6 +101,10 @@ if st.session_state.coords and st.session_state.guide_text is None and not st.se
 
     try:
         response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=data)
+       
+        st.write("Status code:", response.status_code)
+        st.write("Response text:", response.text)
+
         if response.status_code == 200:
             json_resp = response.json()
             guide_text = json_resp["choices"][0]["message"]["content"]
