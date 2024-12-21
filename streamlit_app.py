@@ -1,165 +1,167 @@
 import streamlit as st
 import requests
+from streamlit_geolocation import geolocation
 
-# Set page configuration
-st.set_page_config(page_title="History Tour", layout="centered", page_icon="🗺️")
+# 1. Page Configuration
+st.set_page_config(
+    page_title="History Tour",
+    layout="centered",
+    page_icon="🗺️"
+)
 
-# --- CSS Styles ---
-st.markdown("""
-<style>
-.title {
-    text-align: center;
-    font-size: 2em;
-    margin-bottom: 20px;
-}
+# 2. CSS Styles (Optional)
+st.markdown(
+    """
+    <style>
+    .title {
+        text-align: center;
+        font-size: 2em;
+        margin-bottom: 20px;
+    }
+    .button-row {
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+    .error-text {
+        color: red;
+        text-align: center;
+        margin-top: 20px;
+    }
+    .guide-text {
+        margin-top: 30px;
+        font-size: 1.2em;
+        line-height: 1.6em;
+        text-align: justify;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
-.button-row {
-    display: flex;
-    justify-content: center;
-    gap: 20px;
-    margin-bottom: 20px;
-}
-
-.error-text {
-    color: red;
-    text-align: center;
-    margin-top: 20px;
-}
-
-.loading {
-    text-align: center;
-    margin: 20px 0;
-}
-
-.guide-text {
-    margin-top: 30px;
-    font-size: 1.2em;
-    line-height: 1.6em;
-    text-align: justify;
-}
-</style>
-""", unsafe_allow_html=True)
-
-# --- Session State Variables ---
-if "coords" not in st.session_state:
-    st.session_state.coords = None
-if "guide_text" not in st.session_state:
-    st.session_state.guide_text = None
-if "error" not in st.session_state:
-    st.session_state.error = None
-if "fetching_location" not in st.session_state:
-    st.session_state.fetching_location = True
-if "fetching_guide" not in st.session_state:
-    st.session_state.fetching_guide = False
-
-# --- Title ---
+# 3. Title
 st.markdown('<div class="title">History Tour</div>', unsafe_allow_html=True)
 
-# Instructions to get location
-st.markdown("**Note:** Please allow location access in your browser. Once granted, click 'Get Current Location' to proceed.")
-get_location_btn = st.button("Get Current Location")
+# 4. Ask the user for permission to access their location
+st.info("Please allow location access in your browser when prompted.")
+loc_data = geolocation()
 
-# For demonstration, we mock the coordinates after the user clicks the button.
-# In a real scenario, you would use a streamlit-geolocation component or similar.
-if get_location_btn:
-    # Example coordinates (Statue of Liberty)
-    mock_lat, mock_lon = 40.689247, -74.044502
-    st.session_state.coords = (mock_lat, mock_lon)
-    st.session_state.fetching_location = False
+# 5. If location data is available, extract the coordinates
+if loc_data:
+    # 'loc_data' should look something like:
+    # {
+    #   "coords": {
+    #       "latitude": 37.4219983,
+    #       "longitude": -122.084,
+    #       "accuracy": ...
+    #   }
+    # }
+    latitude = loc_data["coords"]["latitude"]
+    longitude = loc_data["coords"]["longitude"]
 
-# Check if we got coords or not
-if st.session_state.fetching_location:
-    st.info("Awaiting location permissions and retrieval...")
-elif st.session_state.coords is None:
-    st.session_state.error = "Unable to fetch GPS coordinates. Please check permissions."
+    # Display the user's real coordinates
+    st.write(f"**Your coordinates**: {latitude}, {longitude}")
 
-# If we have coordinates, fetch the guided tour
-if st.session_state.coords and st.session_state.guide_text is None and not st.session_state.fetching_guide:
-    st.session_state.fetching_guide = True
-    st.info("Fetching guided tour from server...")
+    # 6. Once we have coords, call OpenAI if we haven't already
+    if "guide_text" not in st.session_state:
+        # Provide a loading message
+        st.info("Fetching guided tour from OpenAI...")
 
-    lat, lon = st.session_state.coords
+        # Retrieve the API key from Streamlit secrets
+        openai_api_key = st.secrets["openai"]["api_key"]
 
-    # Prepare OpenAI API call
-    openai_api_key = st.secrets["openai"]["api_key"]
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {openai_api_key}"
-    }
+        # Headers for the OpenAI request
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {openai_api_key}"
+        }
 
-    prompt = f"You are a historical tour guide. Provide a rich, detailed historical tour for the location at latitude {lat}, longitude {lon}. Explain the historical significance of this place and the surrounding area."
+        # Create a descriptive prompt for GPT
+        prompt = (
+            f"You are a historical tour guide. Provide a rich, detailed historical tour for "
+            f"the location at latitude {latitude}, longitude {longitude}. "
+            f"Explain the historical significance of this place and the surrounding area."
+        )
 
-    data = {
-        "model": "gpt-3.5-turbo",
-        "messages": [
-            {"role": "system", "content": "You are a highly knowledgeable historical tour guide."},
-            {"role": "user", "content": prompt}
-        ],
-        "max_tokens": 400,
-        "temperature": 0.7
-    }
+        # The body of the request to the GPT-3.5-turbo endpoint
+        data = {
+            "model": "gpt-3.5-turbo",
+            "messages": [
+                {"role": "system", "content": "You are a highly knowledgeable historical tour guide."},
+                {"role": "user", "content": prompt},
+            ],
+            "max_tokens": 400,
+            "temperature": 0.7
+        }
 
-    try:
-        response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=data)
-       
-        st.write("Status code:", response.status_code)
-        st.write("Response text:", response.text)
+        # 7. Make the request to OpenAI
+        try:
+            response = requests.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers=headers,
+                json=data
+            )
 
-        if response.status_code == 200:
-            json_resp = response.json()
-            guide_text = json_resp["choices"][0]["message"]["content"]
-            st.session_state.guide_text = guide_text.strip()
-        else:
-            st.session_state.error = "Failed to connect to the server."
-    except Exception as e:
-        st.session_state.error = f"Error: {str(e)}"
+            # Debugging info (optional, remove or comment out in production)
+            st.write("Status code:", response.status_code)
+            st.write("Response text:", response.text)
 
-    st.session_state.fetching_guide = False
+            if response.status_code == 200:
+                json_resp = response.json()
+                guide_text = json_resp["choices"][0]["message"]["content"]
+                st.session_state.guide_text = guide_text.strip()
+            else:
+                st.session_state.guide_text = "Failed to connect to OpenAI. Please try again later."
 
-# Display guide or error
-if st.session_state.error:
-    st.markdown(f'<div class="error-text">{st.session_state.error}</div>', unsafe_allow_html=True)
-elif st.session_state.fetching_guide:
-    st.info("Retrieving the guided tour content...")
-elif st.session_state.guide_text:
-    # Show the guided tour text
-    st.markdown(f'<div class="guide-text">{st.session_state.guide_text}</div>', unsafe_allow_html=True)
+        except Exception as e:
+            st.session_state.guide_text = f"Error: {str(e)}"
 
-    # Add TTS functionality using the browser's Web Speech API
-    tts_script = f"""
-    <script>
-    var guideText = `{st.session_state.guide_text.replace('`','\\`')}`;
-    var utterance = new SpeechSynthesisUtterance(guideText);
-    var synth = window.speechSynthesis;
-    var paused = false;
-    utterance.rate = 1.0;
+    # 8. If we have a guide text, display it and add TTS
+    if "guide_text" in st.session_state and st.session_state.guide_text:
+        st.markdown(
+            f'<div class="guide-text">{st.session_state.guide_text}</div>',
+            unsafe_allow_html=True
+        )
 
-    function playSpeech() {{
-        if (paused) {{
-            synth.resume();
-            paused = false;
-        }} else {{
-            synth.cancel();
-            synth.speak(utterance);
+        # 9. Text-to-Speech using JavaScript in the browser
+        tts_script = f"""
+        <script>
+        var guideText = `{st.session_state.guide_text.replace('`','\\`')}`;
+        var utterance = new SpeechSynthesisUtterance(guideText);
+        var synth = window.speechSynthesis;
+        var paused = false;
+        utterance.rate = 1.0;
+
+        function playSpeech() {{
+            if (paused) {{
+                synth.resume();
+                paused = false;
+            }} else {{
+                synth.cancel();
+                synth.speak(utterance);
+            }}
         }}
-    }}
 
-    function pauseSpeech() {{
-        synth.pause();
-        paused = true;
-    }}
-    </script>
-    """
+        function pauseSpeech() {{
+            synth.pause();
+            paused = true;
+        }}
+        </script>
+        """
+        st.markdown(tts_script, unsafe_allow_html=True)
 
-    st.markdown(tts_script, unsafe_allow_html=True)
+        # TTS control buttons
+        st.markdown('<div class="button-row">', unsafe_allow_html=True)
+        col_play, col_pause = st.columns([1, 1], gap="medium")
+        with col_play:
+            if st.button("Play", key="play_button"):
+                st.markdown("<script>playSpeech();</script>", unsafe_allow_html=True)
+        with col_pause:
+            if st.button("Pause", key="pause_button"):
+                st.markdown("<script>pauseSpeech();</script>", unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
-    # Buttons to control TTS
-    st.markdown('<div class="button-row">', unsafe_allow_html=True)
-    play_col, pause_col = st.columns([1,1], gap="medium")
-    with play_col:
-        if st.button("Play", key="play_button"):
-            st.markdown("<script>playSpeech();</script>", unsafe_allow_html=True)
-    with pause_col:
-        if st.button("Pause", key="pause_button"):
-            st.markdown("<script>pauseSpeech();</script>", unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+else:
+    # If location isn't available yet or user denied permission
+    st.write("Location data not available yet. Please allow browser location access if prompted.")
