@@ -45,6 +45,9 @@ coords = streamlit_js_eval(
     """
 )
 
+# Debugging: Show raw output of the geolocation data
+st.write("Raw geolocation data:", coords)
+
 # Check if we got coordinates or an error
 if coords:
     if "error" in coords:
