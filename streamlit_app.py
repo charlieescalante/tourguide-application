@@ -1,55 +1,35 @@
-import streamlit as st
-from streamlit_geolocation import streamlit_geolocation
-import requests
+# Prepare the headers and prompt for the OpenAI API request
+headers = {
+    "Content-Type": "application/json",
+    "Authorization": f"Bearer {openai_api_key}"
+}
 
-# Page Configuration
-st.set_page_config(page_title="History Tour", layout="centered", page_icon="🗺️")
+prompt = (
+    f"You are a historical tour guide. Provide a rich, detailed historical tour for "
+    f"the location at latitude {latitude}, longitude {longitude}. "
+    f"Explain the historical significance of this place and the surrounding area."
+)
 
-st.markdown('<h1 style="text-align: center;">History Tour</h1>', unsafe_allow_html=True)
+data = {
+    "model": "gpt-3.5-turbo",
+    "messages": [
+        {"role": "system", "content": "You are a highly knowledgeable historical tour guide."},
+        {"role": "user", "content": prompt},
+    ],
+    "max_tokens": 400,
+    "temperature": 0.7
+}
 
-# Geolocation Button
-location = streamlit_geolocation()
+# Make the POST request to OpenAI
+try:
+    response = requests.post(
+        "https://api.openai.com/v1/chat/completions",
+        headers=headers,
+        json=data
+    )
 
-# Display location or error
-if location:
-    if "latitude" in location and "longitude" in location:
-        latitude = location["latitude"]
-        longitude = location["longitude"]
-        st.success(f"Your location: Latitude: {latitude}, Longitude: {longitude}")
-        
-        # Call OpenAI API to get a guided tour
-        if "guide_text" not in st.session_state:
-            st.info("Fetching guided tour from OpenAI...")
-
-            # Retrieve the OpenAI API key from secrets
-            openai_api_key = st.secrets["openai"]["api_key"]
-
-                # Prepare the headers and prompt for the OpenAI API request
-                headers = {
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {openai_api_key}"
-                }
-                
-                prompt = (
-                    f"You are a historical tour guide. Provide a rich, detailed historical tour for "
-                    f"the location at latitude {latitude}, longitude {longitude}. "
-                    f"Explain the historical significance of this place and the surrounding area."
-                )
-                
-                data = {
-                    "model": "gpt-3.5-turbo",
-                    "messages": [
-                        {"role": "system", "content": "You are a highly knowledgeable historical tour guide."},
-                        {"role": "user", "content": prompt},
-                    ],
-                    "max_tokens": 400,
-                    "temperature": 0.7
-                }
-                
-                # Make the POST request to OpenAI
-                try:
-                    response = requests.post(
-                        "https://api.openai.com/v1/chat/completions",
-                        headers=headers,
-                        json=data
-                    )
+    # Process the response
+    if response.status_code == 200:
+        json_resp = response.json()
+        guide_text = json_resp["choices"][0]["message"]["content"]
+        st.session_state.guide_text
