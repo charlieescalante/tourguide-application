@@ -1,39 +1,46 @@
 import streamlit as st
-from streamlit_js_eval import streamlit_js_eval
+from streamlit_geolocation import streamlit_geolocation
 import requests
 
+# Page Configuration
 st.set_page_config(page_title="History Tour", layout="centered", page_icon="🗺️")
 
 st.markdown('<h1 style="text-align: center;">History Tour</h1>', unsafe_allow_html=True)
 
-coords = streamlit_js_eval(
-    js_expressions="""
-    new Promise((resolve, reject) => {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => resolve(position.coords),
-                (error) => reject({ error: error.message }),
-                { timeout: 10000 }
-            );
-        } else {
-            reject({ error: "Geolocation is not supported by this browser." });
-        }
-    });
-    """
-)
+# Geolocation Button
+location = streamlit_geolocation()
 
-st.write("Raw geolocation data:", coords)
+# Display location or error
+if location:
+    if "latitude" in location and "longitude" in location:
+        latitude = location["latitude"]
+        longitude = location["longitude"]
+        st.success(f"Your location: Latitude: {latitude}, Longitude: {longitude}")
+        
+        # Call OpenAI API to get a guided tour
+        if "guide_text" not in st.session_state:
+            st.info("Fetching guided tour from OpenAI...")
 
-if coords:
-    if "error" in coords:
-        st.error(f"Geolocation error: {coords['error']}")
-    else:
-        latitude = coords.get("latitude")
-        longitude = coords.get("longitude")
-        if latitude and longitude:
-            st.success(f"Your coordinates: {latitude}, {longitude}")
-            # Add your OpenAI API integration here
-        else:
-            st.error("Failed to retrieve latitude and longitude.")
-else:
-    st.warning("No geolocation data received. Please try again.")
+            # Retrieve the OpenAI API key from secrets
+            openai_api_key = st.secrets["openai"]["api_key"]
+
+            # Prepare the headers and prompt for the OpenAI API request
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {openai_api_key}"
+            }
+
+            prompt = (
+                f"You are a historical tour guide. Provide a rich, detailed historical tour for "
+                f"the location at latitude {latitude}, longitude {longitude}. "
+                f"Explain the historical significance of this place and the surrounding area."
+            )
+
+            data = {
+                "model": "gpt-3.5-turbo",
+                "messages": [
+                    {"role": "system", "content": "You are a highly knowledgeable historical tour guide."},
+                    {"role": "user", "content": prompt},
+                ],
+                "max_tokens": 400,
+                "temperature": 0.
