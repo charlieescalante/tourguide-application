@@ -48,7 +48,7 @@ try:
     guide_text = response["choices"][0]["message"]["content"]
     st.session_state["guide_text"] = guide_text.strip()
 
-except openai.error.OpenAIError as e:
+except Exception as e:
     st.error(f"OpenAI API call failed: {str(e)}")
     st.stop()
 
