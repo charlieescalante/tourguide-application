@@ -1,56 +1,41 @@
-import streamlit as st
-import requests
 import openai
+import os
+import streamlit as st
 
-# Set up OpenAI API key from Streamlit secrets
-try:
-    openai.api_key = st.secrets["openai"]["api_key"]
-except KeyError:
-    st.error("OpenAI API key not found in Streamlit secrets. Please check your setup.")
+# Load API Key
+openai_api_key = os.getenv("OPENAI_API_KEY")
+if not openai_api_key:
+    st.error("OpenAI API key not found. Set the 'OPENAI_API_KEY' environment variable.")
     st.stop()
 
-# Streamlit page setup
+openai.api_key = openai_api_key
+
+# Streamlit app configuration
 st.set_page_config(page_title="History Tour", layout="centered", page_icon="🌍")
 
-# Initialize session state for guide text
 if "guide_text" not in st.session_state:
     st.session_state["guide_text"] = ""
 
-# Page title
-st.markdown('<h1 style="text-align: center;">History Tour</h1>', unsafe_allow_html=True)
+st.title("History Tour")
 
 # Example geolocation
 latitude = 37.7749  # Replace with dynamic geolocation
 longitude = -122.4194  # Replace with dynamic geolocation
 
-# Request to OpenAI API
 try:
-    prompt = (
-        "You are a historical tour guide. Provide a rich, detailed historical tour for "
-        f"the location at latitude {latitude}, longitude {longitude}."
-    )
-
-    # Request body
-    data = {
-        "model": "gpt-3.5-turbo",
-        "messages": [
+    # OpenAI API call using the updated syntax
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
             {"role": "system", "content": "You are a highly knowledgeable historical tour guide."},
-            {"role": "user", "content": prompt},
+            {"role": "user", "content": f"Provide a rich, detailed historical tour for the location at latitude {latitude}, longitude {longitude}."},
         ],
-        "max_tokens": 400,
-        "temperature": 0.7,
-    }
-
-    # OpenAI API call
-    response = openai.ChatCompletion.create(**data)
-
-    # Extract and display response
+        temperature=0.7,
+        max_tokens=400
+    )
     guide_text = response["choices"][0]["message"]["content"]
     st.session_state["guide_text"] = guide_text.strip()
+    st.write(st.session_state["guide_text"])
 
-except Exception as e:
-    st.error(f"OpenAI API call failed: {str(e)}")
-    st.stop()
-
-# Display the historical tour content
-st.write(st.session_state["guide_text"])
+except openai.error.OpenAIError as e:
+    st.error(f"OpenAI API call failed: {e}")
