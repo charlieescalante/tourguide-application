@@ -11,9 +11,8 @@ if st.button("Get Geolocation"):
     try:
         # Fetch geolocation data with a label
         location_data = st_js(
-            "navigator.geolocation.getCurrentPosition((position) => position.coords)",
-            key="get_geolocation",
-            label="Fetching Geolocation"
+            code="navigator.geolocation.getCurrentPosition((position) => position.coords)",
+            label="Geolocation Retrieval"
         )
 
         if location_data:
