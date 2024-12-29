@@ -1,5 +1,5 @@
 streamlit
 requests
 streamlit-js-eval
-streamlit-geolocation
+streamlit-geolocation==0.0.10
 openai
