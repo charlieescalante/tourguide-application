@@ -27,9 +27,9 @@ try:
         temperature=0.7,
         max_tokens=400,
     )
-    guide_text = response["choices"][0]["message"]["content"]
+    guide_text = response.choices[0].message.content
     st.session_state["guide_text"] = guide_text.strip()
     st.write(st.session_state["guide_text"])
 
-except Exception as e:  # Catch any exceptions
+except Exception as e:
     st.error(f"An error occurred: {e}")
