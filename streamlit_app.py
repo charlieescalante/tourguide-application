@@ -1,10 +1,8 @@
 import openai
-import os
 import streamlit as st
 
 # Load API key from Streamlit secrets
 openai_api_key = st.secrets["openai"]["api_key"]
-
 openai.api_key = openai_api_key
 
 # Streamlit app configuration
@@ -20,7 +18,7 @@ latitude = 37.7749  # Replace with dynamic geolocation
 longitude = -122.4194  # Replace with dynamic geolocation
 
 try:
-    # OpenAI API call using the updated syntax
+    # OpenAI API call
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[
@@ -34,5 +32,5 @@ try:
     st.session_state["guide_text"] = guide_text.strip()
     st.write(st.session_state["guide_text"])
 
-except openai.error.OpenAIError as e:
-    st.error(f"OpenAI API call failed: {e}")
+except Exception as e:  # Catch all exceptions
+    st.error(f"An error occurred: {e}")
