@@ -2,8 +2,7 @@ import openai
 import streamlit as st
 
 # Load API key from Streamlit secrets
-openai_api_key = st.secrets["openai"]["api_key"]
-openai.api_key = openai_api_key
+openai.api_key = st.secrets["openai"]["api_key"]
 
 # Streamlit app configuration
 st.set_page_config(page_title="History Tour", layout="centered", page_icon="🌍")
@@ -18,7 +17,7 @@ latitude = 37.7749  # Replace with dynamic geolocation
 longitude = -122.4194  # Replace with dynamic geolocation
 
 try:
-    # OpenAI API call
+    # OpenAI API call using the updated syntax
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[
@@ -26,11 +25,11 @@ try:
             {"role": "user", "content": f"Provide a rich, detailed historical tour for the location at latitude {latitude}, longitude {longitude}."},
         ],
         temperature=0.7,
-        max_tokens=400
+        max_tokens=400,
     )
     guide_text = response["choices"][0]["message"]["content"]
     st.session_state["guide_text"] = guide_text.strip()
     st.write(st.session_state["guide_text"])
 
-except Exception as e:  # Catch all exceptions
+except Exception as e:  # Catch any exceptions
     st.error(f"An error occurred: {e}")
