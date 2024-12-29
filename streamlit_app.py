@@ -9,10 +9,11 @@ st.title("Geolocation App")
 # Button to fetch geolocation
 if st.button("Get Geolocation"):
     try:
-        # Fetch geolocation data
+        # Fetch geolocation data with a label
         location_data = st_js(
             "navigator.geolocation.getCurrentPosition((position) => position.coords)",
-            key="get_geolocation"
+            key="get_geolocation",
+            label="Fetching Geolocation"
         )
 
         if location_data:
