@@ -1,35 +1,23 @@
-import openai
 import streamlit as st
-
-# Load API key from Streamlit secrets
-openai.api_key = st.secrets["openai"]["api_key"]
+from streamlit_js_eval import streamlit_js_eval as st_js
 
 # Streamlit app configuration
-st.set_page_config(page_title="History Tour", layout="centered", page_icon="🌍")
+st.set_page_config(page_title="Geolocation App", layout="centered", page_icon="📍")
 
-if "guide_text" not in st.session_state:
-    st.session_state["guide_text"] = ""
+st.title("Geolocation App")
 
-st.title("History Tour")
+# Use JavaScript to get geolocation data
+geolocation_data = st_js(
+    "navigator.geolocation.getCurrentPosition((position) => position.coords)",
+    timeout=5
+)
 
-# Example geolocation
-latitude = 37.7749  # Replace with dynamic geolocation
-longitude = -122.4194  # Replace with dynamic geolocation
-
-try:
-    # OpenAI API call using the updated syntax
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": "You are a highly knowledgeable historical tour guide."},
-            {"role": "user", "content": f"Provide a rich, detailed historical tour for the location at latitude {latitude}, longitude {longitude}."},
-        ],
-        temperature=0.7,
-        max_tokens=400,
-    )
-    guide_text = response.choices[0].message.content
-    st.session_state["guide_text"] = guide_text.strip()
-    st.write(st.session_state["guide_text"])
-
-except Exception as e:
-    st.error(f"An error occurred: {e}")
+if geolocation_data:
+    latitude = geolocation_data.get("latitude", "N/A")
+    longitude = geolocation_data.get("longitude", "N/A")
+    
+    st.success("Geolocation Retrieved Successfully!")
+    st.write(f"**Latitude:** {latitude}")
+    st.write(f"**Longitude:** {longitude}")
+else:
+    st.warning("Unable to retrieve geolocation. Please allow access to your location.")
